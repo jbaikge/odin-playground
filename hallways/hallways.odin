@@ -53,25 +53,6 @@ update :: proc() {
 	delta_x := math.abs(player.velocity.x * frame_time)
 	delta_y := math.abs(player.velocity.y * frame_time)
 
-	rl.DrawText(
-		rl.TextFormat(
-			"X: %0.3f Y: %0.3f",
-			player.position.x,
-			player.position.y,
-		),
-		GRID_SIZE / 2,
-		GRID_SIZE * 10,
-		10,
-		rl.LIGHTGRAY,
-	)
-	rl.DrawText(
-		rl.TextFormat("X: %v Y: %v", level_x, level_y),
-		GRID_SIZE / 2,
-		GRID_SIZE * 10 + 16,
-		10,
-		rl.LIGHTGRAY,
-	)
-
 	// Horizontal positioning
 	if rl.IsKeyDown(.D) {
 		player.velocity.x = VELOCITY
@@ -84,7 +65,8 @@ update :: proc() {
 	} else if rl.IsKeyDown(.A) {
 		player.velocity.x = -VELOCITY
 	} else if player.velocity.x < 0 {
-		if player.position.x - delta_x < f32(level_x * GRID_SIZE) {
+		next_x := int((player.position.x - delta_x) / GRID_SIZE)
+		if next_x < level_x {
 			player.position.x = f32(level_x * GRID_SIZE)
 			player.velocity.x = 0
 		}
@@ -102,7 +84,8 @@ update :: proc() {
 	} else if rl.IsKeyDown(.W) {
 		player.velocity.y = -VELOCITY
 	} else if player.velocity.y < 0 {
-		if player.position.y - delta_y < f32(level_y * GRID_SIZE) {
+		next_y := int((player.position.y - delta_y) / GRID_SIZE)
+		if next_y < level_y {
 			player.position.y = f32(level_y * GRID_SIZE)
 			player.velocity.y = 0
 		}
@@ -146,6 +129,9 @@ draw :: proc() {
 	// Clear screen
 	rl.ClearBackground(rl.GetColor(0x1a1b26ff))
 
+	draw_halls()
+	draw_grid()
+
 	// Draw player
 	rl.DrawRectangleRounded(
 		{player.position.x, player.position.y, GRID_SIZE, GRID_SIZE},
@@ -153,9 +139,6 @@ draw :: proc() {
 		8,
 		rl.GetColor(0x7aa2f7ff),
 	)
-
-	draw_halls()
-	draw_grid()
 
 	// Draw FPS
 	rl.DrawText(
