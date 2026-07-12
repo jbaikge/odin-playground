@@ -26,7 +26,7 @@ main :: proc() {
 }
 
 update :: proc() {
-	// Vertical positioning
+	// Horizontal positioning
 	if rl.IsKeyDown(.D) {
 		player.velocity.x = VELOCITY
 	} else if rl.IsKeyDown(.A) {
@@ -36,7 +36,7 @@ update :: proc() {
 		player.position.x = f32(snap)
 	}
 
-	// Horizontal positioning
+	// Vertical positioning
 	if rl.IsKeyDown(.S) {
 		player.velocity.y = VELOCITY
 	} else if rl.IsKeyDown(.W) {
@@ -74,7 +74,13 @@ draw :: proc() {
 	}
 
 	// Draw FPS
-	rl.DrawText(rl.TextFormat("FPS: %v", rl.GetFPS()), 8, 8, 10, rl.GetColor(0x9ece6aff))
+	rl.DrawText(
+		rl.TextFormat("FPS: %v", rl.GetFPS()),
+		8,
+		8,
+		10,
+		rl.GetColor(0x9ece6aff),
+	)
 
 	rl.EndDrawing()
 }
