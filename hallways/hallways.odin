@@ -1,6 +1,7 @@
 package main
 
 import "core:math"
+import "core:math/rand"
 import rl "vendor:raylib"
 
 GRID_SIZE :: 32
@@ -21,8 +22,8 @@ Player :: struct {
 }
 
 player := Player {
-	grid_pos   = {5, 2},
-	visual_pos = {5, 2} * GRID_SIZE,
+	grid_pos   = {16, 16},
+	visual_pos = {16, 16} * GRID_SIZE,
 }
 
 camera := rl.Camera2D {
@@ -32,24 +33,15 @@ camera := rl.Camera2D {
 	zoom     = 1,
 }
 
-
-level_map := [8][8]Environment {
-	{.WALL, .WALL, .WALL, .WALL, .WALL, .WALL, .WALL, .WALL},
-	{.WALL, .FLOOR, .FLOOR, .WALL, .FLOOR, .FLOOR, .FLOOR, .WALL},
-	{.WALL, .FLOOR, .WALL, .FLOOR, .FLOOR, .FLOOR, .FLOOR, .WALL},
-	{.WALL, .FLOOR, .WALL, .WALL, .WALL, .FLOOR, .WALL, .WALL},
-	{.WALL, .FLOOR, .WALL, .WALL, .WALL, .FLOOR, .FLOOR, .WALL},
-	{.WALL, .FLOOR, .FLOOR, .WALL, .WALL, .WALL, .FLOOR, .WALL},
-	{.WALL, .WALL, .FLOOR, .FLOOR, .FLOOR, .FLOOR, .FLOOR, .WALL},
-	{.WALL, .WALL, .WALL, .WALL, .WALL, .WALL, .WALL, .WALL},
-}
-
+level_map := [33][33]Environment{}
 
 main :: proc() {
 	rl.InitWindow(1280, 720, "Grid Movement Test")
 	defer rl.CloseWindow()
 
-	// rl.SetTargetFPS(30)
+	rl.SetTargetFPS(200)
+
+	generate_map()
 	for !rl.WindowShouldClose() {
 		update()
 		draw()
@@ -174,6 +166,7 @@ draw :: proc() {
 	// Clear screen
 	rl.ClearBackground(rl.GetColor(0x1a1b26ff))
 
+	// Set up camera to follow player
 	rl.BeginMode2D(camera)
 
 	draw_halls()
@@ -186,6 +179,8 @@ draw :: proc() {
 		8,
 		rl.GetColor(0x7aa2f7ff),
 	)
+
+	rl.EndMode2D()
 
 	// Draw FPS
 	rl.DrawText(
