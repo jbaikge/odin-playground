@@ -4,7 +4,7 @@ import "core:math"
 import rl "vendor:raylib"
 
 GRID_SIZE :: 32
-VELOCITY :: 5
+VELOCITY :: 7
 
 Environment :: enum {
 	WALL,
@@ -23,6 +23,13 @@ Player :: struct {
 player := Player {
 	grid_pos   = {5, 2},
 	visual_pos = {5, 2} * GRID_SIZE,
+}
+
+camera := rl.Camera2D {
+	target   = player.visual_pos + GRID_SIZE / 2,
+	offset   = {1280 / 2, 720 / 2},
+	rotation = 0,
+	zoom     = 1,
 }
 
 
@@ -61,7 +68,15 @@ can_move :: proc(pos: [2]int) -> bool {
 	return level_map[pos.y][pos.x] == .FLOOR
 }
 
-update :: proc() {
+update_camera :: proc() {
+	camera.target = player.visual_pos + GRID_SIZE / 2
+	camera.offset = {
+		f32(rl.GetScreenWidth() / 2),
+		f32(rl.GetScreenHeight() / 2),
+	}
+}
+
+update_player :: proc() {
 	if player.is_moving {
 		// Progress interpolation over time
 		player.t += rl.GetFrameTime() * VELOCITY
@@ -119,6 +134,11 @@ update :: proc() {
 	player.is_moving = true
 }
 
+update :: proc() {
+	update_player()
+	update_camera()
+}
+
 draw_halls :: proc() {
 	wall_color := rl.GetColor(0x41486877)
 	for row, y in level_map {
@@ -153,6 +173,8 @@ draw :: proc() {
 
 	// Clear screen
 	rl.ClearBackground(rl.GetColor(0x1a1b26ff))
+
+	rl.BeginMode2D(camera)
 
 	draw_halls()
 	draw_grid()
