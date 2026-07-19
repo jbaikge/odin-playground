@@ -1,9 +1,10 @@
 package main
 
+import "core:math"
 import rl "vendor:raylib"
 
 GRID_SIZE :: 32
-VELOCITY :: GRID_SIZE * 5
+VELOCITY :: 5
 
 Environment :: enum {
 	WALL,
@@ -11,14 +12,24 @@ Environment :: enum {
 }
 
 Player :: struct {
-	position: rl.Vector2,
-	velocity: rl.Vector2,
+	grid_pos:   [2]int,
+	start_pos:  rl.Vector2,
+	target_pos: rl.Vector2,
+	visual_pos: rl.Vector2,
+	is_moving:  bool,
+	t:          f32,
 }
+
+player := Player {
+	grid_pos   = {5, 2},
+	visual_pos = {5, 2} * GRID_SIZE,
+}
+
 
 level_map := [8][8]Environment {
 	{.WALL, .WALL, .WALL, .WALL, .WALL, .WALL, .WALL, .WALL},
 	{.WALL, .FLOOR, .FLOOR, .WALL, .FLOOR, .FLOOR, .FLOOR, .WALL},
-	{.WALL, .FLOOR, .WALL, .WALL, .FLOOR, .FLOOR, .FLOOR, .WALL},
+	{.WALL, .FLOOR, .WALL, .FLOOR, .FLOOR, .FLOOR, .FLOOR, .WALL},
 	{.WALL, .FLOOR, .WALL, .WALL, .WALL, .FLOOR, .WALL, .WALL},
 	{.WALL, .FLOOR, .WALL, .WALL, .WALL, .FLOOR, .FLOOR, .WALL},
 	{.WALL, .FLOOR, .FLOOR, .WALL, .WALL, .WALL, .FLOOR, .WALL},
@@ -27,122 +38,85 @@ level_map := [8][8]Environment {
 }
 
 
-player := Player {
-	position = {GRID_SIZE * 2, GRID_SIZE * 1},
-	velocity = {0, 0},
-}
-
 main :: proc() {
 	rl.InitWindow(1280, 720, "Grid Movement Test")
 	defer rl.CloseWindow()
 
-	// rl.SetTargetFPS(60)
+	// rl.SetTargetFPS(30)
 	for !rl.WindowShouldClose() {
 		update()
 		draw()
 	}
 }
 
-can_move :: proc(x: int, y: int) -> bool {
-	if y < 0 || y > len(level_map) {
+can_move :: proc(pos: [2]int) -> bool {
+	if pos.y < 0 || pos.y >= len(level_map) {
 		return false
 	}
-	if x < 0 || x > len(level_map[0]) {
+
+	if pos.x < 0 || pos.x >= len(level_map[0]) {
 		return false
 	}
-	return level_map[y][x] == .FLOOR
+
+	return level_map[pos.y][pos.x] == .FLOOR
 }
 
 update :: proc() {
-	grid_current := [2]int {
-		int(player.position.x / GRID_SIZE),
-		int(player.position.y / GRID_SIZE),
+	if player.is_moving {
+		// Progress interpolation over time
+		player.t += rl.GetFrameTime() * VELOCITY
+
+		if player.t >= 1 {
+			player.visual_pos = player.target_pos
+			player.is_moving = false
+			player.t = 0
+		} else {
+			player.visual_pos.x = math.lerp(
+				player.start_pos.x,
+				player.target_pos.x,
+				player.t,
+			)
+			player.visual_pos.y = math.lerp(
+				player.start_pos.y,
+				player.target_pos.y,
+				player.t,
+			)
+		}
+
+		return
 	}
 
-	can := rl.GetColor(0x9ece6a77)
-	cant := rl.GetColor(0xf7768e77)
-
-	if rl.IsKeyDown(.D) {
-		x := grid_current.x + 1
-		rl.DrawRectangleV(
-			{f32(x * GRID_SIZE), f32(grid_current.y * GRID_SIZE)},
-			{GRID_SIZE, GRID_SIZE},
-			can_move(x, grid_current.y) ? can : cant,
-		)
+	// Determine direction from keys pressed
+	direction: [2]int
+	if rl.IsKeyDown(.W) {
+		direction = {0, -1}
 	} else if rl.IsKeyDown(.A) {
-		x := grid_current.x - 1
-		rl.DrawRectangleV(
-			{f32(x * GRID_SIZE), f32(grid_current.y * GRID_SIZE)},
-			{GRID_SIZE, GRID_SIZE},
-			can_move(x, grid_current.y) ? can : cant,
-		)
-	}
-}
-
-update_old :: proc() {
-	frame_time := rl.GetFrameTime()
-
-	// Current X/Y pos in the level_map
-	level_x := int(player.position.x / GRID_SIZE)
-	level_y := int(player.position.y / GRID_SIZE)
-
-	// NOTE: deltas here are signed!
-	delta_x := player.velocity.x * frame_time
-	delta_y := player.velocity.y * frame_time
-
-	// Possibly the next X or Y position if the player keeps going
-	next_x := int((player.position.x + delta_x) / GRID_SIZE)
-	next_y := int((player.position.y + delta_y) / GRID_SIZE)
-
-	rl.DrawRectangleV(
-		{f32(GRID_SIZE * next_x), f32(GRID_SIZE * next_y)},
-		{GRID_SIZE, GRID_SIZE},
-		rl.GetColor(0x565f8977),
-	)
-
-	// Horizontal positioning
-	if rl.IsKeyDown(.D) {
-		player.velocity.x = VELOCITY
-	} else if player.velocity.x > 0 {
-		if next_x > level_x {
-			player.position.x = f32(next_x * GRID_SIZE)
-			player.velocity.x = 0
-		}
-	} else if rl.IsKeyDown(.A) {
-		player.velocity.x = -VELOCITY
-	} else if player.velocity.x < 0 {
-		if next_x < level_x {
-			player.position.x = f32(level_x * GRID_SIZE)
-			player.velocity.x = 0
-		}
+		direction = {-1, 0}
+	} else if rl.IsKeyDown(.S) {
+		direction = {0, 1}
+	} else if rl.IsKeyDown(.D) {
+		direction = {1, 0}
 	}
 
-	// Vertical positioning
-	if rl.IsKeyDown(.S) {
-		player.velocity.y = VELOCITY
-	} else if player.velocity.y > 0 {
-		if next_y > level_y {
-			player.position.y = f32(next_y * GRID_SIZE)
-			player.velocity.y = 0
-		}
-	} else if rl.IsKeyDown(.W) {
-		player.velocity.y = -VELOCITY
-	} else if player.velocity.y < 0 {
-		if next_y < level_y {
-			player.position.y = f32(level_y * GRID_SIZE)
-			player.velocity.y = 0
-		}
+	// If no movement, bail
+	if direction == {0, 0} {
+		return
 	}
 
-	// if player.velocity.x != 0 && !can_move(next_x, level_y) {
-	// 	player.velocity.x = 0
-	// }
-	//
-	// if player.velocity.y != 0 && !can_move(level_x, next_y) {
-	// 	player.velocity.y = 0
-	// }
+	next_grid := player.grid_pos + direction
 
-	player.position += player.velocity * rl.GetFrameTime()
+	// Don't move if it's not in play
+	if !can_move(next_grid) {
+		return
+	}
+
+	player.grid_pos = next_grid
+	player.start_pos = player.visual_pos
+	player.target_pos = {
+		f32(player.grid_pos.x * GRID_SIZE),
+		f32(player.grid_pos.y * GRID_SIZE),
+	}
+	player.is_moving = true
 }
 
 draw_halls :: proc() {
@@ -185,7 +159,7 @@ draw :: proc() {
 
 	// Draw player
 	rl.DrawRectangleRounded(
-		{player.position.x, player.position.y, GRID_SIZE, GRID_SIZE},
+		{player.visual_pos.x, player.visual_pos.y, GRID_SIZE, GRID_SIZE},
 		0.25,
 		8,
 		rl.GetColor(0x7aa2f7ff),
