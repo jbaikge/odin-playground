@@ -1,7 +1,6 @@
 package main
 
 import "core:math"
-import "core:math/rand"
 import rl "vendor:raylib"
 
 GRID_SIZE :: 32
@@ -33,7 +32,7 @@ camera := rl.Camera2D {
 	zoom     = 1,
 }
 
-level_map := [33][33]Environment{}
+level_map := [65][65]Environment{}
 
 main :: proc() {
 	rl.InitWindow(1280, 720, "Grid Movement Test")
@@ -41,7 +40,7 @@ main :: proc() {
 
 	rl.SetTargetFPS(200)
 
-	generate_map()
+	generate_map(len(level_map) / 2, 3, 4)
 	for !rl.WindowShouldClose() {
 		update()
 		draw()
@@ -170,7 +169,7 @@ draw :: proc() {
 	rl.BeginMode2D(camera)
 
 	draw_halls()
-	draw_grid()
+	// draw_grid()
 
 	// Draw player
 	rl.DrawRectangleRounded(
