@@ -4,7 +4,7 @@ import "core:math"
 import rl "vendor:raylib"
 
 GRID_SIZE :: 32
-VELOCITY :: 7
+VELOCITY :: 9
 
 Environment :: enum {
 	WALL,
@@ -17,6 +17,7 @@ Player :: struct {
 	target_pos: rl.Vector2,
 	visual_pos: rl.Vector2,
 	is_moving:  bool,
+	velocity:   f32,
 	t:          f32,
 }
 
@@ -32,7 +33,7 @@ camera := rl.Camera2D {
 	zoom     = 1,
 }
 
-level_map := [65][65]Environment{}
+level_map := [65][127]Environment{}
 
 main :: proc() {
 	rl.InitWindow(1280, 720, "Grid Movement Test")
@@ -41,6 +42,22 @@ main :: proc() {
 	rl.SetTargetFPS(200)
 
 	generate_map(len(level_map) / 2, 3, 4)
+
+	found := false
+	for y in len(level_map) / 2 ..< len(level_map) {
+		if found {
+			break
+		}
+		for x in 0 ..< len(level_map[0]) {
+			if level_map[y][x] == .FLOOR {
+				player.grid_pos = {x, y}
+				player.visual_pos = {f32(x), f32(y)} * GRID_SIZE
+				found = true
+				break
+			}
+		}
+	}
+
 	for !rl.WindowShouldClose() {
 		update()
 		draw()
@@ -70,7 +87,7 @@ update_camera :: proc() {
 update_player :: proc() {
 	if player.is_moving {
 		// Progress interpolation over time
-		player.t += rl.GetFrameTime() * VELOCITY
+		player.t += rl.GetFrameTime() * player.velocity
 
 		if player.t >= 1 {
 			player.visual_pos = player.target_pos
@@ -102,6 +119,11 @@ update_player :: proc() {
 		direction = {0, 1}
 	} else if rl.IsKeyDown(.D) {
 		direction = {1, 0}
+	}
+
+	player.velocity = VELOCITY
+	if rl.IsKeyDown(.LEFT_SHIFT) {
+		player.velocity *= 1.5
 	}
 
 	// If no movement, bail
@@ -149,13 +171,22 @@ draw_halls :: proc() {
 }
 
 draw_grid :: proc() {
-	screen_width := f32(rl.GetScreenWidth())
-	screen_height := f32(rl.GetScreenHeight())
-	for x := f32(0); x < screen_width; x += GRID_SIZE {
-		rl.DrawLineV({x, 0}, {x, screen_height}, rl.GetColor(0xc0caf577))
+	if !rl.IsKeyDown(.LEFT_CONTROL) {
+		return
 	}
-	for y := f32(0); y < screen_height; y += GRID_SIZE {
-		rl.DrawLineV({0, y}, {screen_width, y}, rl.GetColor(0xc0caf577))
+	for x := f32(0); x < len(level_map[0]) * GRID_SIZE; x += GRID_SIZE {
+		rl.DrawLineV(
+			{x, 0},
+			{x, len(level_map) * GRID_SIZE},
+			rl.GetColor(0xc0caf577),
+		)
+	}
+	for y := f32(0); y < len(level_map) * GRID_SIZE; y += GRID_SIZE {
+		rl.DrawLineV(
+			{0, y},
+			{len(level_map[0]) * GRID_SIZE, y},
+			rl.GetColor(0xc0caf577),
+		)
 	}
 }
 
@@ -169,7 +200,7 @@ draw :: proc() {
 	rl.BeginMode2D(camera)
 
 	draw_halls()
-	// draw_grid()
+	draw_grid()
 
 	// Draw player
 	rl.DrawRectangleRounded(
